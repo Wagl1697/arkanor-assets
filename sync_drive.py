@@ -1,11 +1,22 @@
 import os
 import io
+import hashlib
 import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 ROOT_FOLDER_ID = os.environ.get('DRIVE_FOLDER_ID')
 LOCAL_ROOT_DIR = 'img'
+
+# Función nueva para calcular el código MD5 del archivo local en GitHub
+def get_local_md5(file_path):
+    if not os.path.exists(file_path):
+        return None
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 def download_folder(service, folder_id, local_path):
     if not os.path.exists(local_path):
@@ -15,10 +26,11 @@ def download_folder(service, folder_id, local_path):
     page_token = None
     
     while True:
+        # Le pedimos a Google que también nos devuelva el md5Checksum
         results = service.files().list(
             q=query, 
             spaces='drive',
-            fields="nextPageToken, files(id, name, mimeType)",
+            fields="nextPageToken, files(id, name, mimeType, md5Checksum)",
             pageToken=page_token
         ).execute()
         
@@ -28,6 +40,7 @@ def download_folder(service, folder_id, local_path):
             item_id = item['id']
             item_name = item['name']
             mime_type = item['mimeType']
+            drive_md5 = item.get('md5Checksum') 
             
             item_local_path = os.path.join(local_path, item_name)
 
@@ -35,6 +48,15 @@ def download_folder(service, folder_id, local_path):
                 print(f"📁 Entrando a la subcarpeta: {item_local_path}")
                 download_folder(service, item_id, item_local_path)
             elif mime_type.startswith('image/'):
+                
+                # --- LÓGICA DE OPTIMIZACIÓN ---
+                local_md5 = get_local_md5(item_local_path)
+                # Si el archivo existe y los códigos coinciden, lo saltamos
+                if local_md5 and drive_md5 and local_md5 == drive_md5:
+                    print(f"  ✅ Omitiendo {item_name} (Sin cambios)")
+                    continue
+                # ------------------------------
+
                 print(f"  ⬇️ Descargando imagen: {item_name}...")
                 request = service.files().get_media(fileId=item_id)
                 fh = io.FileIO(item_local_path, 'wb')
