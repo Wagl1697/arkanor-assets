@@ -51,3 +51,7 @@ jobs:
             git push
             echo "✅ Commit realizado con el detalle de los cambios."
           fi
+      - name: 🔔 Avisar a Apps Script
+        run: |
+          curl -L -X POST "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
+          echo "Señal enviada a Google Apps Script"
