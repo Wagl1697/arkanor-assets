@@ -1,26 +1,53 @@
-- name: 💾 Guardar y subir cambios a GitHub
+name: Sincronizar Google Drive a GitHub
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Bajar el código del repo
+        uses: actions/checkout@v4
+
+      - name: 🔐 Autenticar con Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: 🐍 Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Instalar librerías de Google
+        run: pip install google-api-python-client google-auth
+
+      - name: 🚀 Ejecutar script de descarga
+        run: python sync_drive.py
+        env:
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+
+      - name: 💾 Guardar y subir cambios a GitHub
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # ¡ESTA ES LA LÍNEA MÁGICA PARA LOS ACENTOS!
+          # Desactivamos el escape de caracteres para ver bien los acentos
           git config --global core.quotepath off 
           
-          # 1. Preparamos los cambios de la carpeta img
           git add img/
           
-          # 2. Nos fijamos si Git detectó algún cambio
           if git diff --staged --quiet; then
             echo "No hay imágenes nuevas ni modificadas para subir. Terminando sin commit."
           else
-            # 3. Si hay cambios, extraemos la lista exacta (A=Agregado, M=Modificado, D=Borrado)
             DETALLE=$(git diff --name-status --staged)
-            
-            # 4. Hacemos el commit armando un mensaje multilínea
             git commit -m "🖼️ Actualización automática de imágenes" -m "Detalle de los cambios:" -m "$DETALLE"
-            
-            # 5. Subimos los cambios a tu rama
             git push
-            
             echo "✅ Commit realizado con el detalle de los cambios."
           fi
