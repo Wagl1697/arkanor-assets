@@ -60,9 +60,9 @@ jobs:
     needs: sincronizar_drive # <--- ESTO HACE QUE ESPERE A LA TAREA 1
     runs-on: ubuntu-latest
     steps:
-      - name: 🔔 Disparar Webhook
-        run: |
-          echo "Llamando a la URL secreta de Apps Script..."
-          # El flag -f hace que si devuelve un 404 (Page Not Found), marque error en GitHub
-          curl -f -S -L -X POST "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
-          echo -e "\n✅ Señal enviada con éxito a Google Apps Script"
+     - name: 🔔 Disparar Webhook
+       run: |
+        echo "Llamando a la URL secreta de Apps Script..."
+        # Cambiamos -X POST por -d "" para que curl maneje bien la redirección de Google
+        curl -f -S -L -d "" "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
+        echo -e "\n✅ Señal enviada con éxito a Google Apps Script"
