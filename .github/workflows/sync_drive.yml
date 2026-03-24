@@ -1,11 +1,11 @@
 name: Sincronizar Google Drive a GitHub
 
 on:
-  workflow_dispatch: # Esto crea un botón para que lo ejecutes a mano cuando quieras subir imágenes nuevas
+  workflow_dispatch:
 
 permissions:
   contents: write
-  id-token: write # Permiso CLAVE para que funcione la conexión segura que armamos en Google Cloud
+  id-token: write
 
 jobs:
   sincronizar:
@@ -37,6 +37,17 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Desactivamos el escape de caracteres para ver bien los acentos
+          git config --global core.quotepath off 
+          
           git add img/
-          git commit -m "🖼️ Actualización automática de imágenes desde Drive" || echo "No hay imágenes nuevas para subir"
-          git push
+          
+          if git diff --staged --quiet; then
+            echo "No hay imágenes nuevas ni modificadas para subir. Terminando sin commit."
+          else
+            DETALLE=$(git diff --name-status --staged)
+            git commit -m "🖼️ Actualización automática de imágenes" -m "Detalle de los cambios:" -m "$DETALLE"
+            git push
+            echo "✅ Commit realizado con el detalle de los cambios."
+          fi
