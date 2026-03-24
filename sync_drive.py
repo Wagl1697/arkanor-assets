@@ -28,7 +28,7 @@ def download_folder(service, folder_id, local_path):
     # Anotamos esta carpeta como válida
     archivos_validos.add(os.path.abspath(local_path))
 
-    query = f"'{folder_id}' in parents and trashed = false"
+    query = f"'{folder_id}' in parents and trashed = false and (mimeType contains 'image/' or mimeType = 'application/vnd.google-apps.folder')"
     page_token = None
     
     while True:
