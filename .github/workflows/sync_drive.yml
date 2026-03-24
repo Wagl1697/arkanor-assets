@@ -8,7 +8,10 @@ permissions:
   id-token: write
 
 jobs:
-  sincronizar:
+  # ==========================================
+  # TAREA 1: Sincronizar y Subir
+  # ==========================================
+  sincronizar_drive:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Bajar el código del repo
@@ -37,8 +40,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Desactivamos el escape de caracteres para ver bien los acentos
           git config --global core.quotepath off 
           
           git add img/
@@ -51,7 +52,17 @@ jobs:
             git push
             echo "✅ Commit realizado con el detalle de los cambios."
           fi
-      - name: 🔔 Avisar a Apps Script
+
+  # ==========================================
+  # TAREA 2: Avisar a Google Apps Script
+  # ==========================================
+  notificar_appscript:
+    needs: sincronizar_drive # <--- ESTO HACE QUE ESPERE A LA TAREA 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔔 Disparar Webhook
         run: |
-          curl -L -X POST "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
-          echo "Señal enviada a Google Apps Script"
+          echo "Llamando a la URL secreta de Apps Script..."
+          # El flag -f hace que si devuelve un 404 (Page Not Found), marque error en GitHub
+          curl -f -S -L -X POST "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
+          echo -e "\n✅ Señal enviada con éxito a Google Apps Script"
