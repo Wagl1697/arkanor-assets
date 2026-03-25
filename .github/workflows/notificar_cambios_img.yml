@@ -25,10 +25,7 @@ jobs:
         run: |
           # El script solo procesa estas 4 carpetas puntuales, ignorando el resto de img/
           CARPETAS=(
-            "img/Habilidades de Clases"
-            "img/Iconos de Clases"
-            "img/Razas/Habilidades Raciales"
-            "img/Razas/Iconos de Razas"
+            "img/Clases/Talentos de Clases
           )
 
           for carpeta in "${CARPETAS[@]}"; do
