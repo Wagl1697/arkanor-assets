@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'img/**' 
+      
+permissions:
+  contents: write
 
 jobs:
   procesar_y_notificar:
@@ -14,12 +17,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # --- ESTE ES EL PASO CLAVE QUE FALTABA O NO SE ESTÁ LEYENDO ---
       - name: 🛠️ Instalar ImageMagick
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-      # --------------------------------------------------------------
 
       - name: 🎨 Generar versiones en Blanco y Negro
         run: |
