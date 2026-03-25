@@ -49,11 +49,11 @@ jobs:
         run: |
           # Lista exacta de las carpetas a escanear (agregué la de Talentos que sumaste antes)
           CARPETAS=(
-            "img/Habilidades de Clases"
-            "img/Iconos de Clases"
+            "img/Clases/Habilidades de Clases"
+            "img/Clases/Iconos de Clases"
+            "img/Clases/Talentos de Clases"
             "img/Razas/Habilidades Raciales"
             "img/Razas/Iconos de Razas"
-            "img/Clases/Talentos de Clases"
           )
 
           for carpeta in "${CARPETAS[@]}"; do
