@@ -1,15 +1,21 @@
-name: Generar imágenes B&N y Notificar
+name: Procesar Imágenes (Acentos, B&N y Notificar)
 
+# ==========================================
+# CUÁNDO SE EJECUTA
+# ==========================================
 on:
   push:
     paths:
-      - 'img/**' 
-      
+      - 'img/**' # Se dispara con cualquier cambio en la galería
+
+# ==========================================
+# PERMISOS PARA QUE EL BOT PUEDA GUARDAR
+# ==========================================
 permissions:
   contents: write
 
 jobs:
-  procesar_y_notificar:
+  procesar_imagenes:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Descargar código
@@ -22,10 +28,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
+      - name: 📝 Limpiar acentos en toda la carpeta img/
+        run: |
+          # Buscamos todos los archivos dentro de img/ y sus subcarpetas
+          find img/ -type f | while read archivo; do
+            directorio=$(dirname "$archivo")
+            nombre_base=$(basename "$archivo")
+            
+            # Reemplazamos vocales con tilde, dejando la ñ y Ñ intactas (jaja)
+            nuevo_nombre=$(echo "$nombre_base" | sed 's/á/a/g; s/é/e/g; s/í/i/g; s/ó/o/g; s/ú/u/g; s/Á/A/g; s/É/E/g; s/Í/I/g; s/Ó/O/g; s/Ú/U/g')
+            
+            # Si el nombre tenía acentos, lo renombramos
+            if [ "$nombre_base" != "$nuevo_nombre" ]; then
+              mv "$archivo" "$directorio/$nuevo_nombre"
+              echo "Limpiado: '$nombre_base' -> '$nuevo_nombre'"
+            fi
+          done
+
       - name: 🎨 Generar versiones en Blanco y Negro
         run: |
-          # El script solo procesa estas 4 carpetas puntuales, ignorando el resto de img/
+          # Lista exacta de las carpetas a escanear (agregué la de Talentos que sumaste antes)
           CARPETAS=(
+            "img/Habilidades de Clases"
+            "img/Iconos de Clases"
+            "img/Razas/Habilidades Raciales"
+            "img/Razas/Iconos de Razas"
             "img/Clases/Talentos de Clases"
           )
 
@@ -55,10 +82,10 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
           git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-generar imágenes B&N [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-limpiar acentos y generar B&N [skip ci]" && git push)
 
       - name: 🔔 Disparar Webhook a Apps Script
         run: |
           echo "Llamando a la URL secreta de Apps Script..."
           curl -f -S -L -d "" "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
-          echo -e "\n✅ Tarea completada y señal enviada"
+          echo -e "\n✅ Todas las tareas completadas y señal enviada a Apps Script"
