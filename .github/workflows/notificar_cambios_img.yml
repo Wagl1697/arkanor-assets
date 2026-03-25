@@ -1,12 +1,9 @@
 name: Generar imágenes B&N y Notificar
 
-# ==========================================
-# CUÁNDO SE EJECUTA
-# ==========================================
 on:
   push:
     paths:
-      - 'img/**' # Escucha cualquier cambio dentro de img/ para asegurar que SIEMPRE avise a Apps Script
+      - 'img/**' 
 
 jobs:
   procesar_y_notificar:
@@ -17,16 +14,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      # --- ESTO ES LO QUE HAY QUE AGREGAR ---
+      # --- ESTE ES EL PASO CLAVE QUE FALTABA O NO SE ESTÁ LEYENDO ---
       - name: 🛠️ Instalar ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
-      # --------------------------------------
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+      # --------------------------------------------------------------
 
       - name: 🎨 Generar versiones en Blanco y Negro
         run: |
           # El script solo procesa estas 4 carpetas puntuales, ignorando el resto de img/
           CARPETAS=(
-            "img/Clases/Iconos de Clases"
+            "img/Habilidades de Clases"
+            "img/Iconos de Clases"
+            "img/Razas/Habilidades Raciales"
+            "img/Razas/Iconos de Razas"
           )
 
           for carpeta in "${CARPETAS[@]}"; do
