@@ -1,0 +1,24 @@
+name: Notificar Apps Script por cambios en imágenes
+
+# ==========================================
+# CUÁNDO SE EJECUTA (Triggers)
+# ==========================================
+on:
+  push:
+    paths:
+      - 'img/**' # Solo se dispara si el push incluye modificaciones en la carpeta img/
+
+jobs:
+  # ==========================================
+  # TAREA 2: Avisar a Google Apps Script
+  # ==========================================
+  notificar_appscript:
+    # needs: sincronizar_drive # <-- OJO: Si en este archivo YAML no existe el job "sincronizar_drive", tenés que borrar esta línea o te va a dar error.
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔔 Disparar Webhook
+        run: |
+          echo "Llamando a la URL secreta de Apps Script..."
+          # Cambiamos -X POST por -d "" para que curl maneje bien la redirección de Google
+          curl -f -S -L -d "" "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
+          echo -e "\n✅ Señal enviada con éxito a Google Apps Script"
