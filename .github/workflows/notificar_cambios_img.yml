@@ -17,6 +17,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # --- ESTO ES LO QUE HAY QUE AGREGAR ---
+      - name: 🛠️ Instalar ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      # --------------------------------------
+
       - name: 🎨 Generar versiones en Blanco y Negro
         run: |
           # El script solo procesa estas 4 carpetas puntuales, ignorando el resto de img/
