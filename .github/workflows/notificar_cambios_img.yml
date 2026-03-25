@@ -1,24 +1,59 @@
-name: Notificar Apps Script por cambios en imágenes
+name: Generar imágenes B&N y Notificar
 
 # ==========================================
-# CUÁNDO SE EJECUTA (Triggers)
+# CUÁNDO SE EJECUTA
 # ==========================================
 on:
   push:
     paths:
-      - 'img/**' # Solo se dispara si el push incluye modificaciones en la carpeta img/
+      - 'img/**' # Escucha cualquier cambio dentro de img/ para asegurar que SIEMPRE avise a Apps Script
 
 jobs:
-  # ==========================================
-  # TAREA 2: Avisar a Google Apps Script
-  # ==========================================
-  notificar_appscript:
-    # needs: sincronizar_drive # <-- OJO: Si en este archivo YAML no existe el job "sincronizar_drive", tenés que borrar esta línea o te va a dar error.
+  procesar_y_notificar:
     runs-on: ubuntu-latest
     steps:
-      - name: 🔔 Disparar Webhook
+      - name: 📥 Descargar código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🎨 Generar versiones en Blanco y Negro
+        run: |
+          # El script solo procesa estas 4 carpetas puntuales, ignorando el resto de img/
+          CARPETAS=(
+            "img/Razas/Iconos de Razas"
+          )
+
+          for carpeta in "${CARPETAS[@]}"; do
+            if [ -d "$carpeta" ]; then
+              carpeta_bn="${carpeta} Bn"
+              mkdir -p "$carpeta_bn"
+              
+              find "$carpeta" -maxdepth 1 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | while read img; do
+                
+                archivo=$(basename "$img")
+                nombre="${archivo%.*}"
+                ext="${archivo##*.}"
+                img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+                
+                if [ ! -f "$img_bn" ] || [ "$img" -nt "$img_bn" ]; then
+                  echo "Convirtiendo: $img -> $img_bn"
+                  convert "$img" -colorspace Gray "$img_bn"
+                fi
+              done
+            fi
+          done
+
+      - name: 💾 Guardar cambios en GitHub (Commit & Push)
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-generar imágenes B&N [skip ci]" && git push)
+
+      - name: 🔔 Disparar Webhook a Apps Script
         run: |
           echo "Llamando a la URL secreta de Apps Script..."
-          # Cambiamos -X POST por -d "" para que curl maneje bien la redirección de Google
           curl -f -S -L -d "" "${{ secrets.APPSCRIPT_WEBHOOK_URL }}"
-          echo -e "\n✅ Señal enviada con éxito a Google Apps Script"
+          echo -e "\n✅ Tarea completada y señal enviada"
