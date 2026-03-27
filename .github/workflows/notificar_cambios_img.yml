@@ -54,7 +54,8 @@ jobs:
             "img/Clases/Talentos de Clases"
             "img/Razas/Habilidades Raciales"
             "img/Razas/Iconos de Razas"
-            "img/Conocimientos/Conocimientos"
+            "img/Conocimientos"
+            "img/Estadisticas"
           )
 
           for carpeta in "${CARPETAS[@]}"; do
