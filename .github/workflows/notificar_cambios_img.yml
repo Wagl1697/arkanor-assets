@@ -45,8 +45,21 @@ jobs:
       #       fi
       #     done
 
-      - name: 🔲 Generar versiones B&N (Modificadas + Faltantes)
+      - name: 🔲 Generar versiones B&N (Solo en carpetas permitidas)
         run: |
+          # Definimos la lista estricta de carpetas permitidas
+          CARPETAS_PERMITIDAS=(
+            "img/Clases/Habilidades de Clases"
+            "img/Clases/Talentos de Clases"
+            "img/Clases/Iconos de Clases"
+            "img/Conocimientos/Iconos de Conocimientos"
+            "img/Estadisticas/Iconos de Estadisticas"
+            "img/Estadísticas/Iconos de Estadísticas" # Por si la carpeta tiene tilde
+            "img/Estados/Iconos de estados"
+            "img/Razas/Habilidades Raciales"
+            "img/Razas/Iconos de Razas"
+          )
+
           # ==========================================
           # FASE 1: REHACER LAS MODIFICADAS EN ESTE PUSH
           # ==========================================
@@ -56,23 +69,33 @@ jobs:
             BASE_SHA="HEAD~1"
           fi
 
-          ARCHIVOS_CAMBIADOS=$(git diff --name-only $BASE_SHA ${{ github.sha }} | grep '^img/' | grep -v ' Bn' | grep -iE '\.(png|jpg|jpeg)$' || true)
+          # Ignoramos explícitamente las carpetas que terminan en " bn"
+          ARCHIVOS_CAMBIADOS=$(git diff --name-only $BASE_SHA ${{ github.sha }} | grep '^img/' | grep -v ' bn/' | grep -iE '\.(png|jpg|jpeg)$' || true)
 
           if [ -n "$ARCHIVOS_CAMBIADOS" ]; then
             echo "--- PROCESANDO ARCHIVOS MODIFICADOS ---"
             echo "$ARCHIVOS_CAMBIADOS" | while IFS= read -r img; do
               if [ -f "$img" ]; then 
                 carpeta=$(dirname "$img")
-                archivo=$(basename "$img")
-                nombre="${archivo%.*}"
-                ext="${archivo##*.}"
                 
-                carpeta_bn="${carpeta} Bn"
-                mkdir -p "$carpeta_bn"
-                img_bn="$carpeta_bn/${nombre}_bw.${ext}"
-                
-                echo "Rehaciendo B&N para: $img -> $img_bn"
-                convert "$img" -colorspace Gray "$img_bn"
+                # Verificamos si la carpeta está en la lista permitida
+                permitida=false
+                for c in "${CARPETAS_PERMITIDAS[@]}"; do
+                  if [ "$carpeta" = "$c" ]; then permitida=true; break; fi
+                done
+
+                if [ "$permitida" = true ]; then
+                  archivo=$(basename "$img")
+                  nombre="${archivo%.*}"
+                  ext="${archivo##*.}"
+                  
+                  carpeta_bn="${carpeta} bn"
+                  mkdir -p "$carpeta_bn"
+                  img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+                  
+                  echo "Rehaciendo B&N para: $img -> $img_bn"
+                  convert "$img" -colorspace Gray "$img_bn"
+                fi
               fi
             done
           else
@@ -80,25 +103,29 @@ jobs:
           fi
 
           # ==========================================
-          # FASE 2: BUSCAR IMÁGENES QUE NO TENGAN SU B&N
+          # FASE 2: BUSCAR IMÁGENES FALTANTES EN CARPETAS PERMITIDAS
           # ==========================================
           echo -e "\n--- BUSCANDO IMÁGENES SIN VERSIÓN B&N ---"
           
-          # Busca en todo img/ excluyendo las carpetas " Bn"
-          find img/ -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | grep -v ' Bn/' | while read img; do
-            carpeta=$(dirname "$img")
-            archivo=$(basename "$img")
-            nombre="${archivo%.*}"
-            ext="${archivo##*.}"
-            
-            carpeta_bn="${carpeta} Bn"
-            img_bn="$carpeta_bn/${nombre}_bw.${ext}"
-            
-            # Solo convierte si el archivo destino NO existe
-            if [ ! -f "$img_bn" ]; then
-              mkdir -p "$carpeta_bn"
-              echo "Falta B&N, creando: $img -> $img_bn"
-              convert "$img" -colorspace Gray "$img_bn"
+          # En lugar de escanear todo img/, solo recorremos las permitidas
+          for carpeta in "${CARPETAS_PERMITIDAS[@]}"; do
+            if [ -d "$carpeta" ]; then
+              carpeta_bn="${carpeta} bn"
+              
+              find "$carpeta" -maxdepth 1 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | while read img; do
+                archivo=$(basename "$img")
+                nombre="${archivo%.*}"
+                ext="${archivo##*.}"
+                
+                img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+                
+                # Solo convierte si el archivo destino NO existe
+                if [ ! -f "$img_bn" ]; then
+                  mkdir -p "$carpeta_bn"
+                  echo "Falta B&N, creando: $img -> $img_bn"
+                  convert "$img" -colorspace Gray "$img_bn"
+                fi
+              done
             fi
           done
 
