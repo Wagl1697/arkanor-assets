@@ -45,43 +45,59 @@ jobs:
       #       fi
       #     done
 
-      - name: 🔲 Generar versiones en Blanco y Negro (Solo modificadas)
+      - name: 🔲 Generar versiones B&N (Modificadas + Faltantes)
         run: |
-          # 1. Determinar el commit base para comparar los cambios
+          # ==========================================
+          # FASE 1: REHACER LAS MODIFICADAS EN ESTE PUSH
+          # ==========================================
           BASE_SHA=${{ github.event.before }}
           
           if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BASE_SHA="HEAD~1"
           fi
 
-          # 2. Buscar SOLO archivos de imagen modificados, excluyendo las carpetas " Bn"
           ARCHIVOS_CAMBIADOS=$(git diff --name-only $BASE_SHA ${{ github.sha }} | grep '^img/' | grep -v ' Bn' | grep -iE '\.(png|jpg|jpeg)$' || true)
 
-          if [ -z "$ARCHIVOS_CAMBIADOS" ]; then
-            echo "No se detectaron cambios en las imágenes originales. Saltando..."
-            exit 0
+          if [ -n "$ARCHIVOS_CAMBIADOS" ]; then
+            echo "--- PROCESANDO ARCHIVOS MODIFICADOS ---"
+            echo "$ARCHIVOS_CAMBIADOS" | while IFS= read -r img; do
+              if [ -f "$img" ]; then 
+                carpeta=$(dirname "$img")
+                archivo=$(basename "$img")
+                nombre="${archivo%.*}"
+                ext="${archivo##*.}"
+                
+                carpeta_bn="${carpeta} Bn"
+                mkdir -p "$carpeta_bn"
+                img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+                
+                echo "Rehaciendo B&N para: $img -> $img_bn"
+                convert "$img" -colorspace Gray "$img_bn"
+              fi
+            done
+          else
+            echo "No hay imágenes modificadas para rehacer en este push."
           fi
 
-          echo "Archivos específicos a procesar en este push:"
-          echo "$ARCHIVOS_CAMBIADOS"
-
-          # 3. Iterar directamente sobre los archivos que Git marcó como modificados
-          echo "$ARCHIVOS_CAMBIADOS" | while IFS= read -r img; do
-            # Verificar que el archivo exista (en caso de que el cambio haya sido un 'delete')
-            if [ -f "$img" ]; then 
-              carpeta=$(dirname "$img")
-              archivo=$(basename "$img")
-              nombre="${archivo%.*}"
-              ext="${archivo##*.}"
-              
-              carpeta_bn="${carpeta} Bn"
+          # ==========================================
+          # FASE 2: BUSCAR IMÁGENES QUE NO TENGAN SU B&N
+          # ==========================================
+          echo -e "\n--- BUSCANDO IMÁGENES SIN VERSIÓN B&N ---"
+          
+          # Busca en todo img/ excluyendo las carpetas " Bn"
+          find img/ -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | grep -v ' Bn/' | while read img; do
+            carpeta=$(dirname "$img")
+            archivo=$(basename "$img")
+            nombre="${archivo%.*}"
+            ext="${archivo##*.}"
+            
+            carpeta_bn="${carpeta} Bn"
+            img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+            
+            # Solo convierte si el archivo destino NO existe
+            if [ ! -f "$img_bn" ]; then
               mkdir -p "$carpeta_bn"
-              
-              img_bn="$carpeta_bn/${nombre}_bw.${ext}"
-              
-              # Como sabemos que este archivo puntual fue modificado, 
-              # forzamos la conversión sin depender de las fechas (que fallan en CI/CD)
-              echo "Rehaciendo B&N para: $img -> $img_bn"
+              echo "Falta B&N, creando: $img -> $img_bn"
               convert "$img" -colorspace Gray "$img_bn"
             fi
           done
