@@ -28,22 +28,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-      - name: 📝 Limpiar acentos en toda la carpeta img/
-        run: |
-          # Buscamos todos los archivos dentro de img/ y sus subcarpetas
-          find img/ -type f | while read archivo; do
-            directorio=$(dirname "$archivo")
-            nombre_base=$(basename "$archivo")
+      # - name: 📝 Limpiar acentos en toda la carpeta img/
+      #   run: |
+      #     # Buscamos todos los archivos dentro de img/ y sus subcarpetas
+      #     find img/ -type f | while read archivo; do
+      #       directorio=$(dirname "$archivo")
+      #       nombre_base=$(basename "$archivo")
             
-            # Reemplazamos vocales con tilde, dejando la ñ y Ñ intactas (jaja)
-            nuevo_nombre=$(echo "$nombre_base" | sed 's/á/a/g; s/é/e/g; s/í/i/g; s/ó/o/g; s/ú/u/g; s/Á/A/g; s/É/E/g; s/Í/I/g; s/Ó/O/g; s/Ú/U/g')
+      #       # Reemplazamos vocales con tilde, dejando la ñ y Ñ intactas (jaja)
+      #       nuevo_nombre=$(echo "$nombre_base" | sed 's/á/a/g; s/é/e/g; s/í/i/g; s/ó/o/g; s/ú/u/g; s/Á/A/g; s/É/E/g; s/Í/I/g; s/Ó/O/g; s/Ú/U/g')
             
-            # Si el nombre tenía acentos, lo renombramos
-            if [ "$nombre_base" != "$nuevo_nombre" ]; then
-              mv "$archivo" "$directorio/$nuevo_nombre"
-              echo "Limpiado: '$nombre_base' -> '$nuevo_nombre'"
-            fi
-          done
+      #       # Si el nombre tenía acentos, lo renombramos
+      #       if [ "$nombre_base" != "$nuevo_nombre" ]; then
+      #         mv "$archivo" "$directorio/$nuevo_nombre"
+      #         echo "Limpiado: '$nombre_base' -> '$nuevo_nombre'"
+      #       fi
+      #     done
 
       - name: 🎨 Generar versiones en Blanco y Negro
         run: |
