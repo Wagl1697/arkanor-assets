@@ -50,44 +50,39 @@ jobs:
           # 1. Determinar el commit base para comparar los cambios
           BASE_SHA=${{ github.event.before }}
           
-          # Si creás una rama nueva, "before" viene en ceros. Fallback al commit anterior:
           if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BASE_SHA="HEAD~1"
           fi
 
-          # 2. Buscar archivos modificados dentro de img/ y excluir las carpetas " Bn"
-          # El "|| true" evita que el script falle si grep no encuentra nada
-          ARCHIVOS_CAMBIADOS=$(git diff --name-only $BASE_SHA ${{ github.sha }} | grep '^img/' | grep -v ' Bn' || true)
+          # 2. Buscar SOLO archivos de imagen modificados, excluyendo las carpetas " Bn"
+          ARCHIVOS_CAMBIADOS=$(git diff --name-only $BASE_SHA ${{ github.sha }} | grep '^img/' | grep -v ' Bn' | grep -iE '\.(png|jpg|jpeg)$' || true)
 
           if [ -z "$ARCHIVOS_CAMBIADOS" ]; then
             echo "No se detectaron cambios en las imágenes originales. Saltando..."
             exit 0
           fi
 
-          # 3. Extraer solo los directorios de los archivos que cambiaron y quitar duplicados
-          CARPETAS_MODIFICADAS=$(echo "$ARCHIVOS_CAMBIADOS" | while read -r archivo; do dirname "$archivo"; done | sort -u)
+          echo "Archivos específicos a procesar en este push:"
+          echo "$ARCHIVOS_CAMBIADOS"
 
-          echo "Carpetas a procesar en este push:"
-          echo "$CARPETAS_MODIFICADAS"
-
-          # 4. Iterar únicamente sobre las carpetas detectadas
-          echo "$CARPETAS_MODIFICADAS" | while IFS= read -r carpeta; do
-            if [ -d "$carpeta" ]; then
+          # 3. Iterar directamente sobre los archivos que Git marcó como modificados
+          echo "$ARCHIVOS_CAMBIADOS" | while IFS= read -r img; do
+            # Verificar que el archivo exista (en caso de que el cambio haya sido un 'delete')
+            if [ -f "$img" ]; then 
+              carpeta=$(dirname "$img")
+              archivo=$(basename "$img")
+              nombre="${archivo%.*}"
+              ext="${archivo##*.}"
+              
               carpeta_bn="${carpeta} Bn"
               mkdir -p "$carpeta_bn"
               
-              find "$carpeta" -maxdepth 1 -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | while read img; do
-                archivo=$(basename "$img")
-                nombre="${archivo%.*}"
-                ext="${archivo##*.}"
-                img_bn="$carpeta_bn/${nombre}_bw.${ext}"
-                
-                # Sigue respetando la regla: solo convierte si no existe o si es más nueva
-                if [ ! -f "$img_bn" ] || [ "$img" -nt "$img_bn" ]; then
-                  echo "Convirtiendo: $img -> $img_bn"
-                  convert "$img" -colorspace Gray "$img_bn"
-                fi
-              done
+              img_bn="$carpeta_bn/${nombre}_bw.${ext}"
+              
+              # Como sabemos que este archivo puntual fue modificado, 
+              # forzamos la conversión sin depender de las fechas (que fallan en CI/CD)
+              echo "Rehaciendo B&N para: $img -> $img_bn"
+              convert "$img" -colorspace Gray "$img_bn"
             fi
           done
 
