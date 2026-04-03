@@ -136,10 +136,15 @@ jobs:
           
           git add .
           
-          # Hacemos un pull con rebase para traernos los cambios nuevos del repo antes de empujar
-          git pull --rebase origin main
-          
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-limpiar acentos y generar B&N [skip ci]" && git push)
+          # Verificamos si hay cambios en el index (staged). 
+          # Si los hay, hacemos commit, luego pull con rebase y finalmente push.
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-generar imágenes B&N [skip ci]"
+            git pull --rebase origin main
+            git push
+          else
+            echo "No se detectaron cambios nuevos para guardar."
+          fi
 
       - name: 🚀 Disparar Webhook a Apps Script
         run: |
